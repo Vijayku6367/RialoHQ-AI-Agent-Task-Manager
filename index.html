@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rialo | AI Agent Economy Interface</title>
+    <title>Rialo Agent | Interactive AI Task Manager</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
@@ -91,26 +91,31 @@
             box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
         }
 
-        #dispatch-btn {
+        .action-btn {
             background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
             color: #0a0a1a;
             font-weight: bold;
             border: none;
             border-radius: 8px;
-            padding: 0 25px;
+            padding: 15px 25px;
             font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
+            width: 100%;
         }
 
-        #dispatch-btn:hover {
-            transform: scale(1.05);
+        .action-btn:hover {
+            transform: scale(1.02);
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
         }
         
-        #dispatch-btn:disabled {
+        .action-btn:disabled {
             cursor: not-allowed;
             opacity: 0.5;
+        }
+        
+        #action-panel {
+            min-height: 55px;
         }
 
         .workflow-container {
@@ -119,7 +124,7 @@
             background: rgba(0, 0, 0, 0.2);
             border-radius: 8px;
             padding: 20px;
-            min-height: 200px;
+            min-height: 150px;
             border: 1px solid rgba(0, 255, 255, 0.1);
         }
 
@@ -136,51 +141,31 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        .log-icon {
-            margin-right: 15px;
-            font-size: 20px;
-        }
-
-        .status-pending .log-icon::before { content: '◌'; color: var(--primary-glow); animation: spin 1s linear infinite; display: inline-block; }
-        .status-success .log-icon::before { content: '✓'; color: var(--success-color); }
-        .status-error .log-icon::before { content: '✖'; color: var(--error-color); }
-        
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        .log-icon { margin-right: 15px; font-size: 20px; color: var(--success-color); }
+        .log-icon::before { content: '✓'; }
 
         #result-container {
-            margin-top: 30px;
-            opacity: 0;
-            transition: opacity 1s ease;
+            margin-top: 30px; opacity: 0; transition: opacity 1s ease;
         }
-        
-        #result-container.visible {
-            opacity: 1;
-        }
-
-        #result-image {
-            max-width: 100%;
-            border-radius: 8px;
-            border: 2px solid var(--primary-glow);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
-        }
+        #result-container.visible { opacity: 1; }
+        #result-image { max-width: 100%; border-radius: 8px; border: 2px solid var(--primary-glow); box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>SCALE Protocol</h1>
-        <p class="subtitle">An On-Chain AI Agent Task Manager, Powered by Rialo</p>
+        <h1>Rialo Agent</h1>
+        <p class="subtitle">Your Interactive Control Panel for the AI Agent Economy</p>
 
         <div class="input-group">
-            <input type="text" id="prompt-input" placeholder="Enter your image prompt, e.g., 'A cat in a cyberpunk city'">
-            <button id="dispatch-btn">Dispatch Agent</button>
+            <input type="text" id="prompt-input" placeholder="Enter your prompt, e.g., 'A red sports car'">
         </div>
+        
+        <div id="action-panel">
+            </div>
 
         <div class="workflow-container" id="workflow-logs">
-            </div>
+             </div>
         
         <div id="result-container">
              <h2 style="color: var(--primary-glow);">Task Complete</h2>
@@ -190,92 +175,106 @@
 
     <script>
         const promptInput = document.getElementById('prompt-input');
-        const dispatchBtn = document.getElementById('dispatch-btn');
+        const actionPanel = document.getElementById('action-panel');
         const workflowLogs = document.getElementById('workflow-logs');
         const resultContainer = document.getElementById('result-container');
         const resultImage = document.getElementById('result-image');
-
-        // Helper function to create a delay
-        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-        // Function to add a new log entry to the UI
-        function addLog(message, status = 'pending') {
-            const logItem = document.createElement('div');
-            logItem.className = `log-item status-${status}`;
-            
-            const icon = document.createElement('span');
-            icon.className = 'log-icon';
-            
-            const text = document.createElement('span');
-            text.textContent = message;
-
-            logItem.appendChild(icon);
-            logItem.appendChild(text);
-            
-            workflowLogs.appendChild(logItem);
-            return logItem;
-        }
         
-        // Function to update an existing log's status
-        function updateLogStatus(logItem, newStatus, newMessage) {
-             logItem.className = `log-item status-${newStatus}`;
-             if(newMessage) {
-                 logItem.querySelector('span:last-child').textContent = newMessage;
-             }
+        let currentStage = 0;
+
+        function addLog(message) {
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.innerHTML = `<span class="log-icon"></span><span>${message}</span>`;
+            workflowLogs.appendChild(logItem);
         }
 
-        dispatchBtn.addEventListener('click', async () => {
+        function createActionButton(text, onClickHandler) {
+            actionPanel.innerHTML = ''; // Clear previous buttons
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = 'action-btn';
+            button.onclick = () => {
+                button.disabled = true;
+                button.textContent = 'Processing...';
+                setTimeout(() => {
+                    onClickHandler();
+                }, 800);
+            };
+            actionPanel.appendChild(button);
+        }
+
+        function handleMintTask() {
             const prompt = promptInput.value;
             if (!prompt) {
-                alert('Please enter a prompt for the AI Agent.');
+                alert('Please enter a prompt to create a task.');
+                createActionButton('Mint New Task', handleMintTask);
                 return;
             }
+            promptInput.disabled = true;
+            addLog('SCALE Task minted. Payment of 5 RLO escrowed on-chain.');
+            currentStage = 1;
+            updateWorkflow();
+        }
 
-            // Reset UI
-            dispatchBtn.disabled = true;
-            dispatchBtn.textContent = 'Processing...';
-            workflowLogs.innerHTML = '';
-            resultContainer.classList.remove('visible');
+        function handleAssignAgent() {
+            addLog('Image Agent found. Dispatching task via A2A protocol.');
+            currentStage = 2;
+            updateWorkflow();
+        }
 
-            try {
-                // --- The SCALE Workflow Simulation ---
+        function handleSubmission() {
+            addLog('Work submitted on-chain for quality assurance.');
+            currentStage = 3;
+            updateWorkflow();
+        }
 
-                const log1 = addLog('Initializing SCALE Protocol on Rialo...');
-                await sleep(1500);
-                updateLogStatus(log1, 'success', 'SCALE Task minted. Payment of 5 RLO escrowed on-chain.');
+        function handleJudgment() {
+            addLog('Judge Agent Verdict: PASS. Quality meets requirements.');
+            addLog('Payment complete. Task finalized on Rialo blockchain.');
+            
+            // --- MODIFIED LINE ---
+            // Using Unsplash to get a REAL image based on the prompt
+            resultImage.src = `https://source.unsplash.com/512x512/?${encodeURIComponent(promptInput.value)}`;
+            
+            resultImage.alt = promptInput.value;
+            resultContainer.classList.add('visible');
 
-                const log2 = addLog('Searching Rialo Agent Registry for Image Agent...');
-                await sleep(1000);
-                updateLogStatus(log2, 'success', 'Image Agent found. Dispatching task via A2A protocol.');
-
-                const log3 = addLog('Image Agent is processing the prompt...');
-                await sleep(3000);
-                updateLogStatus(log3, 'success', 'Work submitted on-chain for quality assurance.');
-
-                const log4 = addLog('Rialo webcall triggering Judge Agent for verification...');
-                await sleep(2000);
-                // Simulate a successful judgment
-                updateLogStatus(log4, 'success', 'Judge Agent Verdict: PASS. Quality meets requirements.');
-
-                const log5 = addLog('Releasing payment from escrow to Image Agent...');
-                await sleep(1500);
-                updateLogStatus(log5, 'success', 'Payment complete. Task finalized on Rialo blockchain.');
-                
-                // --- Display Result ---
-                resultImage.src = `https://picsum.photos/seed/${encodeURIComponent(prompt)}/512/512`;
-                resultImage.alt = prompt;
-                resultContainer.classList.add('visible');
-
-
-            } catch (error) {
-                addLog('A critical error occurred in the workflow.', 'error');
-                console.error(error);
-            } finally {
-                // Re-enable button
-                dispatchBtn.disabled = false;
-                dispatchBtn.textContent = 'Dispatch Agent';
+            currentStage = 4;
+            updateWorkflow();
+        }
+        
+        function handleReset() {
+             promptInput.value = '';
+             promptInput.disabled = false;
+             workflowLogs.innerHTML = '';
+             resultContainer.classList.remove('visible');
+             currentStage = 0;
+             updateWorkflow();
+        }
+        
+        function updateWorkflow() {
+            switch(currentStage) {
+                case 0:
+                    createActionButton('Mint New Task', handleMintTask);
+                    break;
+                case 1:
+                    createActionButton('Find & Assign Agent', handleAssignAgent);
+                    break;
+                case 2:
+                    createActionButton('Simulate Agent Submitting Work', handleSubmission);
+                    break;
+                case 3:
+                    createActionButton('Request Judgment from Judge Agent', handleJudgment);
+                    break;
+                case 4:
+                    createActionButton('Start New Task', handleReset);
+                    break;
             }
-        });
+        }
+        
+        // Initialize the first button
+        updateWorkflow();
     </script>
 </body>
 </html>
