@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rialo | AI Agent Economy Interface</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-glow: #00ffff;
+            --secondary-glow: #ff00ff;
+            --bg-color: #0a0a1a;
+            --surface-color: rgba(20, 20, 40, 0.6);
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0b0;
+            --success-color: #00ff7f;
+            --error-color: #ff4d4d;
+        }
+
+        @keyframes background-pan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(135deg, var(--bg-color) 0%, #1a1a3a 50%, var(--bg-color) 100%);
+            background-size: 200% 200%;
+            animation: background-pan 15s ease infinite;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--surface-color);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), 0 0 60px rgba(255, 0, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: -webkit-linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        #prompt-input {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #prompt-input:focus {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        #dispatch-btn {
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            color: #0a0a1a;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            padding: 0 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        #dispatch-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        #dispatch-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .workflow-container {
+            margin-top: 20px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 200px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-icon {
+            margin-right: 15px;
+            font-size: 20px;
+        }
+
+        .status-pending .log-icon::before { content: '◌'; color: var(--primary-glow); animation: spin 1s linear infinite; display: inline-block; }
+        .status-success .log-icon::before { content: '✓'; color: var(--success-color); }
+        .status-error .log-icon::before { content: '✖'; color: var(--error-color); }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        #result-container {
+            margin-top: 30px;
+            opacity: 0;
+            transition: opacity 1s ease;
+        }
+        
+        #result-container.visible {
+            opacity: 1;
+        }
+
+        #result-image {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 2px solid var(--primary-glow);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>SCALE Protocol</h1>
+        <p class="subtitle">An On-Chain AI Agent Task Manager, Powered by Rialo</p>
+
+        <div class="input-group">
+            <input type="text" id="prompt-input" placeholder="Enter your image prompt, e.g., 'A cat in a cyberpunk city'">
+            <button id="dispatch-btn">Dispatch Agent</button>
+        </div>
+
+        <div class="workflow-container" id="workflow-logs">
+            </div>
+        
+        <div id="result-container">
+             <h2 style="color: var(--primary-glow);">Task Complete</h2>
+             <img id="result-image" src="" alt="Generated Image">
+        </div>
+    </div>
+
+    <script>
+        const promptInput = document.getElementById('prompt-input');
+        const dispatchBtn = document.getElementById('dispatch-btn');
+        const workflowLogs = document.getElementById('workflow-logs');
+        const resultContainer = document.getElementById('result-container');
+        const resultImage = document.getElementById('result-image');
+
+        // Helper function to create a delay
+        const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+        // Function to add a new log entry to the UI
+        function addLog(message, status = 'pending') {
+            const logItem = document.createElement('div');
+            logItem.className = `log-item status-${status}`;
+            
+            const icon = document.createElement('span');
+            icon.className = 'log-icon';
+            
+            const text = document.createElement('span');
+            text.textContent = message;
+
+            logItem.appendChild(icon);
+            logItem.appendChild(text);
+            
+            workflowLogs.appendChild(logItem);
+            return logItem;
+        }
+        
+        // Function to update an existing log's status
+        function updateLogStatus(logItem, newStatus, newMessage) {
+             logItem.className = `log-item status-${newStatus}`;
+             if(newMessage) {
+                 logItem.querySelector('span:last-child').textContent = newMessage;
+             }
+        }
+
+        dispatchBtn.addEventListener('click', async () => {
+            const prompt = promptInput.value;
+            if (!prompt) {
+                alert('Please enter a prompt for the AI Agent.');
+                return;
+            }
+
+            // Reset UI
+            dispatchBtn.disabled = true;
+            dispatchBtn.textContent = 'Processing...';
+            workflowLogs.innerHTML = '';
+            resultContainer.classList.remove('visible');
+
+            try {
+                // --- The SCALE Workflow Simulation ---
+
+                const log1 = addLog('Initializing SCALE Protocol on Rialo...');
+                await sleep(1500);
+                updateLogStatus(log1, 'success', 'SCALE Task minted. Payment of 5 RLO escrowed on-chain.');
+
+                const log2 = addLog('Searching Rialo Agent Registry for Image Agent...');
+                await sleep(1000);
+                updateLogStatus(log2, 'success', 'Image Agent found. Dispatching task via A2A protocol.');
+
+                const log3 = addLog('Image Agent is processing the prompt...');
+                await sleep(3000);
+                updateLogStatus(log3, 'success', 'Work submitted on-chain for quality assurance.');
+
+                const log4 = addLog('Rialo webcall triggering Judge Agent for verification...');
+                await sleep(2000);
+                // Simulate a successful judgment
+                updateLogStatus(log4, 'success', 'Judge Agent Verdict: PASS. Quality meets requirements.');
+
+                const log5 = addLog('Releasing payment from escrow to Image Agent...');
+                await sleep(1500);
+                updateLogStatus(log5, 'success', 'Payment complete. Task finalized on Rialo blockchain.');
+                
+                // --- Display Result ---
+                resultImage.src = `https://picsum.photos/seed/${encodeURIComponent(prompt)}/512/512`;
+                resultImage.alt = prompt;
+                resultContainer.classList.add('visible');
+
+
+            } catch (error) {
+                addLog('A critical error occurred in the workflow.', 'error');
+                console.error(error);
+            } finally {
+                // Re-enable button
+                dispatchBtn.disabled = false;
+                dispatchBtn.textContent = 'Dispatch Agent';
+            }
+        });
+    </script>
+</body>
+</html>
