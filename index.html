@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rialo Agent | Interactive AI Task Manager</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-glow: #00ffff;
+            --secondary-glow: #ff00ff;
+            --bg-color: #0a0a1a;
+            --surface-color: rgba(20, 20, 40, 0.6);
+            --text-color: #e0e0e0;
+            --text-muted: #a0a0b0;
+            --success-color: #00ff7f;
+            --error-color: #ff4d4d;
+        }
+
+        @keyframes background-pan {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            background-image: linear-gradient(135deg, var(--bg-color) 0%, #1a1a3a 50%, var(--bg-color) 100%);
+            background-size: 200% 200%;
+            animation: background-pan 15s ease infinite;
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 700px;
+            background: var(--surface-color);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.1), 0 0 60px rgba(255, 0, 255, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            margin-bottom: 10px;
+            background: -webkit-linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+
+        #prompt-input {
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            color: var(--text-color);
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #prompt-input:focus {
+            border-color: var(--primary-glow);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        }
+
+        .action-btn {
+            background: linear-gradient(45deg, var(--primary-glow), var(--secondary-glow));
+            color: #0a0a1a;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            padding: 15px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        .action-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        }
+        
+        .action-btn:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        
+        #action-panel {
+            min-height: 55px;
+        }
+
+        .workflow-container {
+            margin-top: 20px;
+            text-align: left;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            min-height: 150px;
+            border: 1px solid rgba(0, 255, 255, 0.1);
+        }
+
+        .log-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            opacity: 0;
+            animation: fadeIn 0.5s forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .log-icon { margin-right: 15px; font-size: 20px; color: var(--success-color); }
+        .log-icon::before { content: '✓'; }
+
+        #result-container {
+            margin-top: 30px; opacity: 0; transition: opacity 1s ease;
+        }
+        #result-container.visible { opacity: 1; }
+        #result-image { max-width: 100%; border-radius: 8px; border: 2px solid var(--primary-glow); box-shadow: 0 0 20px rgba(0, 255, 255, 0.5); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Rialto Agent</h1>
+        <p class="subtitle">Your Interactive Control Panel for the AI Agent Economy</p>
+
+        <div class="input-group">
+            <input type="text" id="prompt-input" placeholder="Enter your prompt, e.g., 'A red sports car'">
+        </div>
+        
+        <div id="action-panel">
+            </div>
+
+        <div class="workflow-container" id="workflow-logs">
+             </div>
+        
+        <div id="result-container">
+             <h2 style="color: var(--primary-glow);">Task Complete</h2>
+             <img id="result-image" src="" alt="Generated Image">
+        </div>
+    </div>
+
+    <script>
+        const promptInput = document.getElementById('prompt-input');
+        const actionPanel = document.getElementById('action-panel');
+        const workflowLogs = document.getElementById('workflow-logs');
+        const resultContainer = document.getElementById('result-container');
+        const resultImage = document.getElementById('result-image');
+        
+        let currentStage = 0;
+
+        function addLog(message) {
+            const logItem = document.createElement('div');
+            logItem.className = 'log-item';
+            logItem.innerHTML = `<span class="log-icon"></span><span>${message}</span>`;
+            workflowLogs.appendChild(logItem);
+        }
+
+        function createActionButton(text, onClickHandler) {
+            actionPanel.innerHTML = ''; // Clear previous buttons
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = 'action-btn';
+            button.onclick = () => {
+                button.disabled = true;
+                button.textContent = 'Processing...';
+                setTimeout(() => {
+                    onClickHandler();
+                }, 800);
+            };
+            actionPanel.appendChild(button);
+        }
+
+        function handleMintTask() {
+            const prompt = promptInput.value;
+            if (!prompt) {
+                alert('Please enter a prompt to create a task.');
+                createActionButton('Mint New Task', handleMintTask);
+                return;
+            }
+            promptInput.disabled = true;
+            addLog('SCALE Task minted. Payment of 5 RLO escrowed on-chain.');
+            currentStage = 1;
+            updateWorkflow();
+        }
+
+        function handleAssignAgent() {
+            addLog('Image Agent found. Dispatching task via A2A protocol.');
+            currentStage = 2;
+            updateWorkflow();
+        }
+
+        function handleSubmission() {
+            addLog('Work submitted on-chain for quality assurance.');
+            currentStage = 3;
+            updateWorkflow();
+        }
+
+        function handleJudgment() {
+            addLog('Judge Agent Verdict: PASS. Quality meets requirements.');
+            addLog('Payment complete. Task finalized on Rialo blockchain.');
+            
+            // =======================================================
+            // ===   UPDATED AND MORE RELIABLE IMAGE SERVICE   ===
+            // =======================================================
+            // This service is less likely to give an error.
+            resultImage.src = `https://loremflickr.com/512/512/${encodeURIComponent(promptInput.value)}/all`;
+            
+            resultImage.alt = promptInput.value;
+            resultContainer.classList.add('visible');
+
+            currentStage = 4;
+            updateWorkflow();
+        }
+        
+        function handleReset() {
+             promptInput.value = '';
+             promptInput.disabled = false;
+             workflowLogs.innerHTML = '';
+             resultContainer.classList.remove('visible');
+             currentStage = 0;
+             updateWorkflow();
+        }
+        
+        function updateWorkflow() {
+            switch(currentStage) {
+                case 0:
+                    createActionButton('Mint New Task', handleMintTask);
+                    break;
+                case 1:
+                    createActionButton('Find & Assign Agent', handleAssignAgent);
+                    break;
+                case 2:
+                    createActionButton('Simulate Agent Submitting Work', handleSubmission);
+                    break;
+                case 3:
+                    createActionButton('Request Judgment from Judge Agent', handleJudgment);
+                    break;
+                case 4:
+                    createActionButton('Start New Task', handleReset);
+                    break;
+            }
+        }
+        
+        // Initialize the first button
+        updateWorkflow();
+    </script>
+</body>
+</html>
